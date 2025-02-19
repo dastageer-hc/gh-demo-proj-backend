@@ -1,5 +1,4 @@
 import express from "express";
-import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import { createClient } from "@supabase/supabase-js";
@@ -8,7 +7,16 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const server = http.createServer(app);
+app.use(cors());
+app.use(express.json());
+
+const port = process.env.PORT || 3200;
+
+// Use app.listen to create the HTTP server implicitly
+const server = app.listen(port, () => {
+  console.log(`🚀 Server running on port ${port}`);
+});
+
 const io = new Server(server, {
   cors: {
     origin: "*", // Allow frontend to connect
@@ -20,9 +28,6 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_ANON_KEY
 );
-
-app.use(cors());
-app.use(express.json());
 
 async function getTodos() {
   const { data, error } = await supabase.from("todos").select("*");
@@ -54,5 +59,3 @@ io.on("connection", (socket) => {
     console.log("Client disconnected:", socket.id);
   });
 });
-
-server.listen(3200, () => console.log("🚀 Server running on port 5000"));
