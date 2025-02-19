@@ -1,10 +1,11 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-const cors = require("cors");
-const { createClient } = require("@supabase/supabase-js");
+import express from "express";
+import http from "http";
+import { Server } from "socket.io";
+import cors from "cors";
+import { createClient } from "@supabase/supabase-js";
+import dotenv from "dotenv";
 
-require("dotenv").config();
+dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
