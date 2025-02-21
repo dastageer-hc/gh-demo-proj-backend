@@ -10,7 +10,7 @@ const app = express();
 const port = 3200;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); 
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
