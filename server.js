@@ -1,5 +1,5 @@
+// server.js
 import express from "express";
-import { Server } from "socket.io";
 import cors from "cors";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
@@ -7,55 +7,55 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
+const port = 3200;
+
 app.use(cors());
 app.use(express.json());
-
-const port = process.env.PORT || 3200;
-
-// Use app.listen to create the HTTP server implicitly
-const server = app.listen(port, () => {
-  console.log(`🚀 Server running on port ${port}`);
-});
-
-const io = new Server(server, {
-  cors: {
-    origin: "*", // Allow frontend to connect
-    methods: ["GET", "POST"],
-  },
-});
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_ANON_KEY
 );
 
-async function getTodos() {
+// Fetch all todos
+app.get("/todos", async (req, res) => {
   const { data, error } = await supabase.from("todos").select("*");
-  if (error) console.error("Error fetching todos:", error);
-  return data;
-}
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
 
-io.on("connection", (socket) => {
-  console.log("New client connected:", socket.id);
+// Add a new todo
+app.post("/todos", async (req, res) => {
+  const { task } = req.body;
+  if (!task) return res.status(400).json({ error: "Task is required" });
+  const { data, error } = await supabase
+    .from("todos")
+    .insert([{ task, completed: false }])
+    .select("*");
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
 
-  // Send initial todos when a client connects
-  getTodos().then((todos) => socket.emit("update", todos));
+// Delete a todo
+app.delete("/todos/:id", async (req, res) => {
+  const { id } = req.params;
+  const { error } = await supabase.from("todos").delete().eq("id", id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ message: "Todo deleted" });
+});
 
-  // Listen for new todo addition
-  socket.on("newTodo", async () => {
-    console.log("New todo added");
-    const todos = await getTodos();
-    io.emit("update", todos); // Broadcast updated todos
-  });
+// Toggle completion status
+app.put("/todos/:id", async (req, res) => {
+  const { id } = req.params;
+  const { completed } = req.body;
+  const { error } = await supabase
+    .from("todos")
+    .update({ completed })
+    .eq("id", id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ message: "Todo updated" });
+});
 
-  // Listen for todo deletion
-  socket.on("deleteTodo", async () => {
-    console.log("Todo deleted");
-    const todos = await getTodos();
-    io.emit("update", todos); // Broadcast updated todos
-  });
-
-  socket.on("disconnect", () => {
-    console.log("Client disconnected:", socket.id);
-  });
+app.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
 });
